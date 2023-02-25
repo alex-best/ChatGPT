@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  osm-postgis:
+    image: postgis/postgis:13-3.1
+    environment:
+      POSTGRES_USER: osm
+      POSTGRES_PASSWORD: osm
+      POSTGRES_DB: osm
+    volumes:
+      - ./initdb:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - osm-network
+
+  osm-import:
+    image: overv/openstreetmap-tile-server:latest
+    environment:
+      PGPASSWORD: osm
+      POSTGRES_DB: osm
+      POSTGRES_USER: osm
+      POSTGRES_HOST: osm-postgis
+      OSM2PGSQL_EXTRA_ARGS: "-C 2048"
+      REPLICATION_METHOD: planet
+      REPLICATION_URL: "https://planet.osm.org/replication/day/"
+    volumes:
+      - ./openstreetmap:/var/lib/postgresql/13/osm_data
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    depends_on:
+      - osm-postgis
+    networks:
+      - osm-network
+
+networks:
+  osm-network:
+    driver: bridge
